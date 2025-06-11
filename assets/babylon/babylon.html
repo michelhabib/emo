@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Babylon UMD bundle from CDN -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+  <title>Jammo Robot</title>  
+  <link rel="stylesheet" href="babylon.css"/>  
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>  
+  <!-- script src="script.js"></script -->
+   <script>
+        const canvas = document.getElementById('renderCanvas');
+
+        const engine = new BABYLON.Engine(canvas);
+
+        const createScene = function () {
+            const scene = new BABYLON.Scene(engine);
+            // scene.createDefaultCameraOrLight(true, false, true);
+            scene.createDefaultLight(true);
+            // const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 5, 0), scene);
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
+            camera.setTarget(BABYLON.Vector3.Zero());
+            camera.attachControl(canvas, true);
+            // const box = BABYLON.MeshBuilder.CreateBox();
+            BABYLON.SceneLoader.ImportMeshAsync("", "", "jammo.glb", scene);
+            return scene;
+        }
+
+        const scene = createScene();
+
+        engine.runRenderLoop(function () {
+            scene.render();
+        });
+
+        window.addEventListener('resize', function () {
+            engine.resize();
+        });
+   </script>
+
+</body>
+</html>

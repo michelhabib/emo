@@ -12,7 +12,9 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
+    // set default tab for Characters screen
     <Tabs
+      initialRouteName="characters"
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
@@ -44,7 +46,7 @@ export default function TabLayout() {
         name="characters"
         options={{
           title: 'Characters',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.2.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
     </Tabs>

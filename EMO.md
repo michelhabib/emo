@@ -4,7 +4,10 @@
 
 # Tasks
 
-- Get Babylon to work in WebView
+- [x] Get Babylon to work in WebView
+- [x] Get Babylon to work in Chrome as well
+- [ ] Get Babylone to load from local files
+- [ ] 
 - Get Jammo to show.
 
 
