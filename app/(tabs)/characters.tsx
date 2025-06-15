@@ -3,8 +3,8 @@ import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { WebView } from 'react-native-webview';
-
 
 export default function CharactersScreen() {
   /** ----------------------------------------------------------
@@ -12,32 +12,41 @@ export default function CharactersScreen() {
    * --------------------------------------------------------- */
   const [uri, setUri] = useState<string | null>(null);
   const [uriJS, setUriJS] = useState<string | null>(null);
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('front');
 
-useEffect(() => {
-  (async () => {
-    const [htmlAsset, cssAsset, jsAsset, glbAsset] = await Promise.all([
-      Asset.fromModule(require('../../assets/babylon/babylon.html')).downloadAsync(),
-      Asset.fromModule(require('../../assets/babylon/babylon.css')).downloadAsync(),
-      Asset.fromModule(require('../../assets/babylon/script.txt')).downloadAsync(),
-      Asset.fromModule(require('../../assets/babylon/jammo.glb')).downloadAsync(),
-    ]);
+  useEffect(() => {
+    (async () => {
+      const [htmlAsset, cssAsset, jsAsset, glbAsset] = await Promise.all([
+        Asset.fromModule(require('../../assets/babylon/babylon.html')).downloadAsync(),
+        Asset.fromModule(require('../../assets/babylon/babylon.css')).downloadAsync(),
+        Asset.fromModule(require('../../assets/babylon/script.txt')).downloadAsync(),
+        Asset.fromModule(require('../../assets/babylon/jammo.glb')).downloadAsync(),
+      ]);
 
-    // 1️⃣ Read the raw HTML
-    let raw = await FileSystem.readAsStringAsync(htmlAsset.localUri!);
+      // 1️⃣ Read the raw HTML
+      let raw = await FileSystem.readAsStringAsync(htmlAsset.localUri!);
 
-    // 2️⃣ Replace relative paths with absolute file:// URIs
-    raw = raw
-      .replace('href="babylon.css"', `href="${cssAsset.localUri}"`)
-      .replace('src="script.js"', `src="${jsAsset.localUri}"`)
-      .replace('"jammo.glb"', `"${glbAsset.localUri}"`);
-    console.log('Resolved HTML:', raw);
-    // 3️⃣ Write out a temp HTML file you can point WebView at
-    const tempFile = FileSystem.documentDirectory + 'babylon_temp.html';
-    await FileSystem.writeAsStringAsync(tempFile, raw);
+      // 2️⃣ Replace relative paths with absolute file:// URIs
+      raw = raw
+        .replace('href="babylon.css"', `href="${cssAsset.localUri}"`)
+        .replace('src="script.js"', `src="${jsAsset.localUri}"`)
+        .replace('"jammo.glb"', `"${glbAsset.localUri}"`);
+      console.log('Resolved HTML:', raw);
+      // 3️⃣ Write out a temp HTML file you can point WebView at
+      const tempFile = FileSystem.documentDirectory + 'babylon_temp.html';
+      await FileSystem.writeAsStringAsync(tempFile, raw);
 
-    setUri(tempFile);
-  })();
-}, []);
+      setUri(tempFile);
+    })();
+  }, []);
+
+  // Request camera permission on mount
+  useEffect(() => {
+    if (!hasPermission) {
+      requestPermission();
+    }
+  }, [hasPermission, requestPermission]);
 
   /** ----------------------------------------------------------
    * 2️⃣  WEB build: keep your iframe tester
@@ -68,13 +77,12 @@ useEffect(() => {
         source={{ uri }}                 // same for iOS & Android 🎉
         allowFileAccess
         allowFileAccessFromFileURLs
-        allowUniversalAccessFromFileURLs // lets Babylon fetch .css / .js / .glb :contentReference[oaicite:2]{index=2}
+        allowUniversalAccessFromFileURLs // lets Babylon fetch .css / .js / .glb
         mixedContentMode="always" 
         javaScriptEnabled
         domStorageEnabled
         style={styles.webview}
         startInLoadingState
-        /* ...props from step 1... */
         onError={({ nativeEvent }) => {
           console.error('WebView JS error:', nativeEvent);
           // maybe show a fallback or retry
@@ -83,11 +91,41 @@ useEffect(() => {
           console.error('WebView HTTP failure:', nativeEvent.statusCode, nativeEvent.description);
         }}   
       />
+      
+      {/* Camera overlay */}
+      {hasPermission && device && (
+        <View style={styles.cameraContainer}>
+          <Camera
+            style={styles.camera}
+            device={device}
+            isActive={true}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  webview:   { flex: 1 },
+  webview: { flex: 1 },
+  cameraContainer: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 150,
+    height: 200,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  camera: {
+    flex: 1,
+  },
 });
