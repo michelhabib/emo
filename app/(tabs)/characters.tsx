@@ -3,9 +3,25 @@ import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, Frame, useCameraDevice, useCameraPermission, useFrameProcessor } from 'react-native-vision-camera';
+import { Camera, Frame, useCameraDevice, useCameraPermission, useFrameProcessor, VisionCameraProxy } from 'react-native-vision-camera';
 // import { Camera, Face, FaceDetectionOptions } from 'react-native-vision-camera-face-detector';
 import { WebView } from 'react-native-webview';
+
+
+const plugin = VisionCameraProxy.initFrameProcessorPlugin('detectFaces', {
+    // Optional: specify the path to the JS file if needed
+  });
+
+/**
+ * detect faces.
+ */
+export function detectFaces(frame: Frame) {
+  'worklet'
+  if (plugin == null) {
+    throw new Error("Failed to load Frame Processor Plugin!")
+  }
+  return plugin.call(frame)
+}
 
 export default function CharactersScreen() {
   /** ----------------------------------------------------------

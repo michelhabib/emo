@@ -2,6 +2,7 @@ package com.anonymous.emo
 
 import android.app.Application
 import android.content.res.Configuration
+import com.anonymous.emo.detectface.detectFacePluginPackage
 
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -22,6 +23,7 @@ class MainApplication : Application(), ReactApplication {
         this,
         object : DefaultReactNativeHost(this) {
           override fun getPackages(): List<ReactPackage> {
+            @Suppress("UnnecessaryLocalVariable")
             val packages = PackageList(this).packages
             // Packages that cannot be autolinked yet can be added manually here, for example:
             packages.add(detectFacePluginPackage())
