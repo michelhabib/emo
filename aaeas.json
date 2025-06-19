@@ -1,0 +1,7 @@
+{
+  "build": {
+    "production": {
+      "android": { "workflow": "managed", "credentialsSource": "local" }
+    }
+  }
+}
