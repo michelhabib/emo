@@ -31,7 +31,7 @@ export default function CharactersScreen() {
     (async () => {
       const [htmlAsset, cssAsset, jsAsset, glbAsset] = await Promise.all([
         Asset.fromModule(require('../../assets/babylon/babylon.html')).downloadAsync(),
-        Asset.fromModule(require('../../assets/babylon/babylon.css')).downloadAsync(),
+        Asset.fromModule(require('../../assets/babylon/babylon_style.css')).downloadAsync(),
         Asset.fromModule(require('../../assets/babylon/script.txt')).downloadAsync(),
         Asset.fromModule(require('../../assets/babylon/jammo.glb')).downloadAsync(),
       ]);
