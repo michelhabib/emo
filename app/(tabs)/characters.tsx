@@ -3,18 +3,30 @@ import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera, Frame, useCameraDevice, useCameraPermission, useFrameProcessor } from 'react-native-vision-camera';
+// import { Camera, Face, FaceDetectionOptions } from 'react-native-vision-camera-face-detector';
 import { WebView } from 'react-native-webview';
 
 export default function CharactersScreen() {
   /** ----------------------------------------------------------
-   * 1️⃣  Expo / native: resolve the bundled index.html once
+   * 1️⃣  All hooks must be called before any conditional returns
    * --------------------------------------------------------- */
   const [uri, setUri] = useState<string | null>(null);
   const [uriJS, setUriJS] = useState<string | null>(null);
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
 
+  const frameProcessor = useFrameProcessor((frame: Frame) => {
+    'worklet'; // enable worklet mode
+    // Here you can process the frame, e.g. detect faces
+    const faces = detectFaces(frame)
+    console.log(`Faces in Frame: ${faces}`)
+    // console.log('Frame received:', frame.toString());
+  }, []);
+
+  /** ----------------------------------------------------------
+   * 2️⃣  Effects
+   * --------------------------------------------------------- */
   useEffect(() => {
     (async () => {
       const [htmlAsset, cssAsset, jsAsset, glbAsset] = await Promise.all([
@@ -32,7 +44,6 @@ export default function CharactersScreen() {
         .replace('href="babylon.css"', `href="${cssAsset.localUri}"`)
         .replace('src="script.js"', `src="${jsAsset.localUri}"`)
         .replace('"jammo.glb"', `"${glbAsset.localUri}"`);
-      console.log('Resolved HTML:', raw);
       // 3️⃣ Write out a temp HTML file you can point WebView at
       const tempFile = FileSystem.documentDirectory + 'babylon_temp.html';
       await FileSystem.writeAsStringAsync(tempFile, raw);
@@ -96,10 +107,12 @@ export default function CharactersScreen() {
       {hasPermission && device && (
         <View style={styles.cameraContainer}>
           <Camera
-            style={styles.camera}
-            device={device}
+            style={StyleSheet.absoluteFill}
             isActive={true}
-          />
+            device={device}
+            frameProcessor={frameProcessor}
+            frameProcessorFps={3}
+          /> 
         </View>
       )}
     </SafeAreaView>
@@ -129,3 +142,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+

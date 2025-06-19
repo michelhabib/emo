@@ -27,6 +27,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="emo"/>
+        <data android:scheme="exp+emo"/>
       </intent-filter>
     </activity>
   </application>
