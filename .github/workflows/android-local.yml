@@ -1,0 +1,55 @@
+name: Android • Local EAS
+on:
+  workflow_dispatch:            # manual trigger
+  push:
+    branches: [ main ]          # or your release branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest      # free 2 000 min/mo for private repos
+    timeout-minutes: 60
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # 1️⃣ Java
+    - uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 17
+
+    # 2️⃣ Android SDK + NDK
+    - uses: android-actions/setup-android@v3           # installs sdkmanager etc.
+      with:
+        packages: >-
+          platform-tools
+          build-tools;34.0.0
+          platforms;android-34
+          ndk;26.1.10909125                             # adjust to match your NDK
+
+    # 3️⃣ Node + Expo / EAS CLI
+    - uses: expo/expo-github-action@v8                  # caches node_modules automatically
+      with:
+        token: ${{ secrets.EXPO_TOKEN }}
+        eas-version: latest
+
+    # 4️⃣ Decode keystore (if you didn't commit credentials.json)
+    - run: |
+        echo "$ANDROID_KEYSTORE_B64" | base64 -d > keystore.jks
+      env:
+        ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+
+    # 5️⃣ Install deps
+    - run: npm ci
+
+    # 6️⃣ Build locally
+    - name: EAS local build
+      run: >
+        eas build --local --platform android
+        --profile production --output app-release.aab --non-interactive
+
+    # 7️⃣ Save artefact
+    - uses: actions/upload-artifact@v4
+      with:
+        name: android-aab
+        path: app-release.aab
