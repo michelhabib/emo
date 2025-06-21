@@ -16,6 +16,7 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "@shopify/react-native-skia": "^2.0.5",
     "babel-preset-expo": "^13.2.1",
     "expo": "^53.0.11",
     "expo-blur": "~14.1.5",
@@ -43,7 +44,8 @@
     "react-native-vision-camera-face-detector": "^1.8.5",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "react-native-worklets-core": "^1.5.0"
+    "react-native-worklets-core": "^1.5.0",
+    "react-navigation": "^5.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

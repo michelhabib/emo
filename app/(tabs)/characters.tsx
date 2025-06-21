@@ -1,44 +1,62 @@
+import { PaintStyle, Skia } from '@shopify/react-native-skia';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, Frame, useCameraDevice, useCameraPermission, useFrameProcessor, VisionCameraProxy } from 'react-native-vision-camera';
+import { Camera, runAtTargetFps, useCameraDevice, useFrameProcessor } from 'react-native-vision-camera';
 // import { Camera, Face, FaceDetectionOptions } from 'react-native-vision-camera-face-detector';
+import { Face, FaceDetectionOptions, useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { WebView } from 'react-native-webview';
+import { useSharedValue, Worklets } from 'react-native-worklets-core';
 
-
-const plugin = VisionCameraProxy.initFrameProcessorPlugin('detectFaces', {
-    // Optional: specify the path to the JS file if needed
-  });
-
-/**
- * detect faces.
- */
-export function detectFaces(frame: Frame) {
-  'worklet'
-  if (plugin == null) {
-    throw new Error("Failed to load Frame Processor Plugin!")
-  }
-  return plugin.call(frame)
-}
 
 export default function CharactersScreen() {
   /** ----------------------------------------------------------
    * 1️⃣  All hooks must be called before any conditional returns
    * --------------------------------------------------------- */
   const [uri, setUri] = useState<string | null>(null);
-  const [uriJS, setUriJS] = useState<string | null>(null);
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('front');
 
-  const frameProcessor = useFrameProcessor((frame: Frame) => {
-    'worklet'; // enable worklet mode
-    // Here you can process the frame, e.g. detect faces
-    const faces = detectFaces(frame)
-    console.log(`Faces in Frame: ${faces}`)
-    // console.log('Frame received:', frame.toString());
-  }, []);
+  const faceDetectionOptions = useRef<FaceDetectionOptions>( {
+    // detection options
+  } ).current
+
+  const device = useCameraDevice('front')
+  const { detectFaces } = useFaceDetector( faceDetectionOptions )
+
+  useEffect(() => {
+    (async () => {
+      const status = await Camera.requestCameraPermission()
+      console.log({ status })
+    })()
+  }, [device])
+
+  const handleDetectedFaces = Worklets.createRunOnJS( (
+    faces: Face[]
+  ) => { 
+    console.log( 'faces detected', faces )
+  })
+
+  const facesData = useSharedValue<Face[]>([])
+  const TARGET_FPS = 2
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet'
+  //   runAsync(frame, () => {
+  //     'worklet'
+  //     facesData.value = detectFaces(frame)
+  //   })
+    runAtTargetFps(TARGET_FPS, () => {
+      'worklet'
+      facesData.value = detectFaces(frame)
+      handleDetectedFaces(facesData.value)
+    })
+  }, [facesData])
+
+  // Create paint for face rectangles
+  const facePaint = Skia.Paint();
+  facePaint.setColor(Skia.Color('red'));
+  facePaint.setStyle(PaintStyle.Stroke);
+  facePaint.setStrokeWidth(4);
 
   /** ----------------------------------------------------------
    * 2️⃣  Effects
@@ -68,12 +86,6 @@ export default function CharactersScreen() {
     })();
   }, []);
 
-  // Request camera permission on mount
-  useEffect(() => {
-    if (!hasPermission) {
-      requestPermission();
-    }
-  }, [hasPermission, requestPermission]);
 
   /** ----------------------------------------------------------
    * 2️⃣  WEB build: keep your iframe tester
@@ -119,18 +131,6 @@ export default function CharactersScreen() {
         }}   
       />
       
-      {/* Camera overlay */}
-      {hasPermission && device && (
-        <View style={styles.cameraContainer}>
-          <Camera
-            style={StyleSheet.absoluteFill}
-            isActive={true}
-            device={device}
-            frameProcessor={frameProcessor}
-            frameProcessorFps={3}
-          /> 
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -158,4 +158,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
