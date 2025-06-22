@@ -12,8 +12,476 @@
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>  
-  <script src="/debugHelpers.js"></script>
-  <script src="/script.js"></script>
+  <!-- script src="/debugHelpers.js"></script -->
+  <!-- script src="script.js"></script -->
+<script>
+  /**
+   * Creates debug helpers for the scene
+   * @param {BABYLON.Scene} scene - The Babylon.js scene
+   * @returns {Object} Object containing debug helper functions
+   */
+  function createDebugHelpers(scene) {
+      let coordinateSystemVisible = false;
+      let coordinateSystemElements = [];
+
+      // Helper function to create labels
+      const createLabel = (text, color, fontSize = 20, mesh = null, offsetX = 0, offsetY = 0, offsetZ = 0) => {
+          const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+          const label = new BABYLON.GUI.TextBlock();
+          label.text = text;
+          label.color = color;
+          label.fontSize = fontSize;
+          advancedTexture.addControl(label);
+          
+          if (mesh) {
+              label.linkWithMesh(mesh);
+              if (offsetX !== 0) label.linkOffsetX = offsetX;
+              if (offsetY !== 0) label.linkOffsetY = offsetY;
+              if (offsetZ !== 0) label.linkOffsetZ = offsetZ;
+          }
+          
+          return label;
+      };
+
+      // Helper function to create axis cylinders
+      const createAxis = (name, color, height = 5, diameter = 0.1, rotation = null, position = null) => {
+          const axis = BABYLON.MeshBuilder.CreateCylinder(name, {height, diameter}, scene);
+          
+          if (rotation) {
+              if (rotation.x !== undefined) axis.rotation.x = rotation.x;
+              if (rotation.y !== undefined) axis.rotation.y = rotation.y;
+              if (rotation.z !== undefined) axis.rotation.z = rotation.z;
+          }
+          
+          if (position) {
+              if (position.x !== undefined) axis.position.x = position.x;
+              if (position.y !== undefined) axis.position.y = position.y;
+              if (position.z !== undefined) axis.position.z = position.z;
+          }
+          
+          const material = new BABYLON.StandardMaterial(`${name}Mat`, scene);
+          material.diffuseColor = color;
+          axis.material = material;
+          
+          return axis;
+      };
+
+      // Helper function to create marker spheres
+      const createMarker = (name, color, diameter = 0.3, position = null) => {
+          const marker = BABYLON.MeshBuilder.CreateSphere(name, {diameter}, scene);
+          const material = new BABYLON.StandardMaterial(`${name}Mat`, scene);
+          material.diffuseColor = color;
+          marker.material = material;
+          
+          if (position) {
+              marker.position = position.clone ? position.clone() : new BABYLON.Vector3(position.x || 0, position.y || 0, position.z || 0);
+          }
+          
+          return marker;
+      };
+
+      // Helper function to clear coordinate system elements
+      const clearCoordinateSystem = () => {
+          coordinateSystemElements.forEach(element => {
+              if (element.dispose) {
+                  element.dispose();
+              }
+          });
+          coordinateSystemElements = [];
+      };
+
+      const debugHelpers = {
+          // Toggle wireframe mode for all meshes
+          toggleWireframe: () => {
+              scene.meshes.forEach(mesh => {
+                  if (mesh.material) {
+                      mesh.material.wireframe = !mesh.material.wireframe;
+                  }
+              });
+          },
+
+          // Toggle bounding box display for all meshes
+          toggleBoundingBoxes: () => {
+              scene.meshes.forEach(mesh => {
+                  mesh.showBoundingBox = !mesh.showBoundingBox;
+              });
+          },
+
+          // Log scene statistics
+          logSceneStats: () => {
+              const stats = [
+                  ['Meshes', scene.meshes.length],
+                  ['Materials', scene.materials.length],
+                  ['Textures', scene.textures.length],
+                  ['Lights', scene.lights.length],
+                  ['Cameras', scene.cameras.length]
+              ];
+              
+              console.log('Scene Statistics:');
+              stats.forEach(([name, count]) => console.log(`- ${name}: ${count}`));
+          },
+
+          // Toggle coordinate system visibility
+          toggleCoordinateSystem: () => {
+              if (coordinateSystemVisible) {
+                  clearCoordinateSystem();
+                  coordinateSystemVisible = false;
+                  console.log('Coordinate system hidden');
+              } else {
+                  debugHelpers.createCoordinateSystem();
+                  coordinateSystemVisible = true;
+                  console.log('Coordinate system shown');
+              }
+          },
+
+          // Create detailed coordinate system with labels and markers
+          createCoordinateSystem: () => {
+              clearCoordinateSystem();
+
+              // Define axis configurations
+              const axisConfigs = [
+                  { name: "xAxis", color: BABYLON.Color3.Red(), rotation: {z: -Math.PI/2}, position: {x: 2.5}, label: "X", labelColor: "red", labelOffset: {x: 30} },
+                  { name: "yAxis", color: BABYLON.Color3.Green(), position: {y: 2.5}, label: "Y", labelColor: "green", labelOffset: {y: -30} },
+                  { name: "zAxis", color: BABYLON.Color3.Blue(), rotation: {x: Math.PI/2}, position: {z: 2.5}, label: "Z", labelColor: "blue", labelOffset: {z: 30} }
+              ];
+
+              // Create axes and their labels
+              axisConfigs.forEach(config => {
+                  const axis = createAxis(config.name, config.color, 5, 0.1, config.rotation, config.position);
+                  coordinateSystemElements.push(axis);
+                  
+                  const label = createLabel(config.label, config.labelColor, 24, axis, 
+                      config.labelOffset.x || 0, config.labelOffset.y || 0, config.labelOffset.z || 0);
+                  coordinateSystemElements.push(label);
+              });
+
+              // Define marker configurations
+              const markerConfigs = [
+                  { name: "origin", color: BABYLON.Color3.Yellow(), position: {x: 0, y: 0, z: 0}, labelText: "Origin (0,0,0)", labelColor: "yellow" },
+                  { name: "cameraMarker", color: BABYLON.Color3.Purple(), position: scene.activeCamera.position, labelText: "Camera", labelColor: "purple" }
+              ];
+
+              // Add light marker if light exists
+              const light = scene.lights[0];
+              if (light) {
+                  let lightPosition;
+                  if (light.position) {
+                      lightPosition = light.position;
+                  } else if (light.direction) {
+                      lightPosition = light.direction.scale(-5);
+                  }
+                  
+                  if (lightPosition) {
+                      markerConfigs.push({
+                          name: "lightMarker", 
+                          color: BABYLON.Color3.FromHexString("#FFA500"), 
+                          position: lightPosition, 
+                          labelText: "Light", 
+                          labelColor: "orange"
+                      });
+                  }
+              }
+
+              // Create markers and their labels
+              markerConfigs.forEach(config => {
+                  const marker = createMarker(config.name, config.color, 0.3, config.position);
+                  coordinateSystemElements.push(marker);
+                  
+                  const label = createLabel(config.labelText, config.labelColor, 20, marker, 0, -40);
+                  coordinateSystemElements.push(label);
+              });
+
+              return coordinateSystemElements;
+          }
+      };
+
+      // Define keyboard shortcuts configuration
+      const keyboardShortcuts = [
+          { key: 'w', action: 'toggleWireframe', message: 'Wireframe toggled' },
+          { key: 'b', action: 'toggleBoundingBoxes', message: 'Bounding boxes toggled' },
+          { key: 's', action: 'logSceneStats', message: null },
+          { key: 'c', action: 'toggleCoordinateSystem', message: null }
+      ];
+
+      // Add keyboard shortcuts for debug functions
+      scene.onKeyboardObservable.add((kbInfo) => {
+          if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
+              const shortcut = keyboardShortcuts.find(s => s.key === kbInfo.event.key.toLowerCase());
+              if (shortcut) {
+                  debugHelpers[shortcut.action]();
+                  if (shortcut.message) console.log(shortcut.message);
+              }
+          }
+      });
+
+      // Log available keyboard shortcuts
+      console.log('Debug helpers loaded. Keyboard shortcuts:');
+      keyboardShortcuts.forEach(shortcut => {
+          console.log(`- ${shortcut.key.toUpperCase()}: ${shortcut.action.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+      });
+
+      return debugHelpers;
+  }
+
+  // Make the function available globally
+  window.createDebugHelpers = createDebugHelpers;
+</script>
+
+   <script >
+
+const canvas = document.getElementById('renderCanvas');
+
+        const engine = new BABYLON.Engine(canvas);
+
+        const createLights = function (scene) {
+            // Create a default light
+            // dLight = scene.createDefaultLight(true);
+            // dLight.intensity = 0.5; 
+            // const light = new BABYLON.PointLight("plight", new BABYLON.Vector3(0, 5,3), scene);
+            const light = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0, 5, 0), scene);
+            light.diffuse = new BABYLON.Color3(1, 1, 1);
+            light.specular = new BABYLON.Color3(0, 0, 0.3);
+            light.intensity = 5; // Adjust intensity as needed           
+        }
+
+        const createCamera = function (scene) {
+            const cameraTarget = new BABYLON.Vector3(0, 3, 0);
+            const camera = new BABYLON.ArcRotateCamera("faceCam", Math.PI / 4, Math.PI / 4, 10, cameraTarget, scene);
+            camera.setPosition(new BABYLON.Vector3(0, 6, 8)); // Set initial position
+            camera.ellipsoid = new BABYLON.Vector3(3, 6, 3);
+            camera.minZ = 0; // Set near plane to avoid clipping
+            camera.checkCollisions = true;
+            camera.wheelDeltaPercentage = 0.01; // Adjust zoom sensitivity
+            camera.lowerRadiusLimit = 1;  // adjust so you can't "enter" the mesh
+            camera.attachControl(canvas, true);
+        }
+
+        const loadCharacterDebug = function (scene) {
+            BABYLON.SceneLoader.ImportMeshAsync("", "", "jammo.glb", scene)
+            .then(({ meshes, skeletons, animationGroups }) => {
+                const skel   = skeletons[0];
+                const eyeL   = skel.bones.find(b => /EyeLeft/i.test(b.name));
+                const eyeR   = skel.bones.find(b => /EyeRight/i.test(b.name));
+                const nodeL = eyeL.getTransformNode();
+                const nodeR = eyeR.getTransformNode();
+
+                // Store initial positions and scales
+                const initialPosL = nodeL.position.clone();
+                const initialPosR = nodeR.position.clone();
+                const initialScaleL = nodeL.scaling.clone();
+                const initialScaleR = nodeR.scaling.clone();
+
+                // Eye tracking state
+                const eyeTracking = {
+                    currentX: 0,
+                    currentY: 0,
+                    targetX: 0,
+                    targetY: 0,
+                    lastMouseMoveTime: 0,
+                    mouseInCanvas: false,
+                    delayBeforeResponse: 100,
+                    followSpeed: 0.1,
+                    eyeRange: 0.3,
+
+                    // When true, targetX/Y are supplied by external (React-Native) control rather than mouse.
+                    externalControl: false,
+                };
+
+                // Throttled debug logging (every 500 ms)
+                let lastDebugLog = 0;
+
+                // Blinking state
+                const blinkState = {
+                    settings: {
+                        closePercentage: 0.8,
+                        timeBetweenBlinks: 4000,
+                        randomization: 0.3
+                    },
+                    nextBlinkTime: performance.now() + 2000,
+                    isBlinking: false,
+                    blinkStartTime: 0,
+                    blinkDuration: 150,
+                    currentScaleY: 1
+                };
+
+                // Mouse event handlers
+                canvas.addEventListener('mouseenter', () => {
+                    eyeTracking.mouseInCanvas = true;
+                });
+                
+                canvas.addEventListener('mouseleave', () => {
+                    eyeTracking.mouseInCanvas = false;
+                    eyeTracking.targetX = 0;
+                    eyeTracking.targetY = 0;
+                });
+
+                canvas.addEventListener('mousemove', () => {
+                    eyeTracking.lastMouseMoveTime = performance.now();
+                });
+
+                // Kill existing animations
+                scene.stopAnimation(nodeL);
+                scene.stopAnimation(nodeR);
+
+                // Eye tracking function
+                function updateEyeTracking() {
+                    const currentTime = performance.now();
+                    const timeSinceMouseMove = currentTime - eyeTracking.lastMouseMoveTime;
+
+                    // When external control is OFF, derive targets from pointer position
+                    if (!eyeTracking.externalControl && eyeTracking.mouseInCanvas && timeSinceMouseMove > eyeTracking.delayBeforeResponse) {
+                        const rect = canvas.getBoundingClientRect();
+                        const mouseX = (scene.pointerX - rect.width / 2) / (rect.width / 2);
+                        const mouseY = -(scene.pointerY - rect.height / 2) / (rect.height / 2);
+
+                        eyeTracking.targetX = mouseX * eyeTracking.eyeRange;
+                        eyeTracking.targetY = mouseY * eyeTracking.eyeRange;
+                    }
+
+                    // Smooth interpolation (applies in either mode)
+                    eyeTracking.currentX += (eyeTracking.targetX - eyeTracking.currentX) * eyeTracking.followSpeed;
+                    eyeTracking.currentY += (eyeTracking.targetY - eyeTracking.currentY) * eyeTracking.followSpeed;
+
+                    // -------------------------------------------------
+                    // Debug: log eyeTracking values every 500 ms
+                    // -------------------------------------------------
+                    if (currentTime - lastDebugLog > 3000) {
+                        console.log('[Debug] eyeTracking', {
+                            currentX: eyeTracking.currentX.toFixed(3),
+                            currentY: eyeTracking.currentY.toFixed(3),
+                            targetX : eyeTracking.targetX.toFixed(3),
+                            targetY : eyeTracking.targetY.toFixed(3),
+                            external: eyeTracking.externalControl,
+                        });
+                        lastDebugLog = currentTime;
+                    }
+                }
+
+                // Blinking function
+                function updateBlinking() {
+                    const currentTime = performance.now();
+                    
+                    // Check if it's time to blink
+                    if (!blinkState.isBlinking && currentTime >= blinkState.nextBlinkTime) {
+                        blinkState.isBlinking = true;
+                        blinkState.blinkStartTime = currentTime;
+                        
+                        // Calculate next blink time with randomization
+                        const randomRange = blinkState.settings.timeBetweenBlinks * blinkState.settings.randomization;
+                        const randomOffset = (Math.random() - 0.5) * randomRange;
+                        blinkState.nextBlinkTime = currentTime + blinkState.settings.timeBetweenBlinks + randomOffset;
+                    }
+                    
+                    // Handle blink animation
+                    if (blinkState.isBlinking) {
+                        const blinkProgress = (currentTime - blinkState.blinkStartTime) / blinkState.blinkDuration;
+                        
+                        if (blinkProgress >= 1) {
+                            blinkState.isBlinking = false;
+                            blinkState.currentScaleY = 1;
+                        } else {
+                            const blinkCurve = Math.sin(blinkProgress * Math.PI);
+                            blinkState.currentScaleY = 1 - (blinkCurve * blinkState.settings.closePercentage);
+                        }
+                    }
+                }
+
+                // Apply eye transformations
+                function applyEyeTransformations() {
+                    // Apply position
+                    nodeL.position.x = initialPosL.x + eyeTracking.currentX;
+                    nodeL.position.y = initialPosL.y + eyeTracking.currentY;
+                    nodeR.position.x = initialPosR.x + eyeTracking.currentX;
+                    nodeR.position.y = initialPosR.y + eyeTracking.currentY;
+                    
+                    // Apply blinking scale
+                    nodeL.scaling.z = initialScaleL.y * blinkState.currentScaleY;
+                    nodeR.scaling.z = initialScaleR.y * blinkState.currentScaleY;
+                    
+                    nodeL.markAsDirty();
+                    nodeR.markAsDirty();
+                }
+
+                // Separate render observers
+                scene.onAfterRenderObservable.add(() => {
+                    updateEyeTracking();
+                    applyEyeTransformations();
+                });
+
+                scene.onAfterRenderObservable.add(() => {
+                    updateBlinking();
+                });
+
+                // Expose setter so RN→WebView bridge can update tracking even without pointer events
+                window.setEyePointer = function (xPct, yPct) {
+                    // Map percentage (0..1) to -1..1 range (X rightwards positive, Y upwards positive)
+                    const normX = (xPct - 0.5) * 2;     // -1 .. 1
+                    const normY = -(yPct - 0.5) * 2;    // invert Y so 1 is up
+
+                    eyeTracking.targetX = normX * eyeTracking.eyeRange;
+                    eyeTracking.targetY = normY * eyeTracking.eyeRange;
+
+                    eyeTracking.externalControl = true;
+
+                    // Remember last external update to potentially time-out later if desired
+                    eyeTracking.lastExternalUpdate = performance.now();
+
+                    // NOTE: Do NOT call window.setEyePointer from within itself – that causes infinite recursion!
+                };
+            });
+        }
+
+        const createScene = function () {
+            const scene = new BABYLON.Scene(engine);
+            scene.collisionEnabled = true;            
+            createLights(scene);
+            createCamera(scene);
+            loadCharacterDebug(scene);
+           // scene.debugLayer.show({
+            //     embedMode:true
+            // });
+
+            // In your script.js file, you can now use:
+            const debugHelpers = createDebugHelpers(scene);
+                        
+            return scene;
+        }
+
+        const scene = createScene();
+
+        engine.runRenderLoop(function () {
+            scene.render();
+        });
+
+        window.addEventListener('resize', function () {
+            engine.resize();
+        });
+
+        // -------------------------------------------------------------
+        // 🔗 Bridge: receive eye-centre data from React-Native WebView
+        // -------------------------------------------------------------
+        const handleMessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data && data.type === 'eyePosition') {
+                    const { xPct, yPct } = data;
+                    console.log('[Debug] message → setEyePointer', { xPct: xPct.toFixed(3), yPct: yPct.toFixed(3) });
+                    // Forward to eye-tracking handler when ready
+                    if (typeof window.setEyePointer === 'function') {
+                        window.setEyePointer(xPct, yPct);
+                    }
+                }
+            } catch (e) {
+                // silently ignore non-JSON messages
+            }
+        };
+
+        // React-Native on iOS/Android delivers postMessage events to `document`,
+        // whereas standard browsers target `window`. Listen to both for safety.
+        window.addEventListener('message', handleMessage);
+        document.addEventListener('message', handleMessage);
+        
+   </script>
 
 </body>
 </html>

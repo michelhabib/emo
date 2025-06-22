@@ -1,3 +1,4 @@
+import BabylonWebView from '@/components/BabylonWebView';
 import { Canvas } from '@shopify/react-native-skia';
 import React, { useEffect, useRef } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
@@ -9,14 +10,15 @@ import Eye from '../../components/Eye';
 import FaceRect from '../../components/FaceRect';
 import Mouth from '../../components/Mouth';
 
-const PREVIEW_W = 200;
-const PREVIEW_H = 300;
+
+const PREVIEW_W = 150;
+const PREVIEW_H = 200;
 
 export default function CameraScreen() {
   const faceDetectionOptions = useRef<FaceDetectionOptions>({
     performanceMode: 'fast',
     classificationMode: 'all',
-    minFaceSize: 0.15,
+    minFaceSize: 0.1,
     landmarkMode: 'all',
     //autoMode: true,
   }).current;
@@ -37,7 +39,7 @@ export default function CameraScreen() {
   }, [device]);
 
   // Preview size constants (must be defined before using in callbacks)
-  const TARGET_FPS = 4;
+  const TARGET_FPS = 10;
 
   const deviceOrientation = device?.sensorOrientation;
 
@@ -166,6 +168,7 @@ export default function CameraScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <BabylonWebView style={{ flex: 1 }} />
       {device ? (
         <View style={styles.cameraContainer}>
           <Camera
@@ -208,16 +211,16 @@ const styles = StyleSheet.create({
     width: PREVIEW_W,
     height: PREVIEW_H,
     overflow: 'hidden',
-    // position: 'absolute',
-    // top: 50,
-    // right: 20,
-    // borderRadius: 10,
-    // borderWidth: 2,
-    // borderColor: '#fff',
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.25,
-    // shadowRadius: 3.84,
-    // elevation: 5,
+    position: 'absolute',
+    top: 400,
+    right: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });

@@ -5,5 +5,5 @@ import { Redirect } from 'expo-router';
 // work-arounds.
 
 export default function IndexRedirect() {
-  return <Redirect href="/camera" />;
+  return <Redirect href="/home" />;
 } 
