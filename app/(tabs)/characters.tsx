@@ -22,12 +22,14 @@ export default function CharactersScreen() {
   } ).current
 
   const device = useCameraDevice('front')
+  
   const { detectFaces } = useFaceDetector( faceDetectionOptions )
 
   useEffect(() => {
     (async () => {
       const status = await Camera.requestCameraPermission()
-      console.log({ status })
+      console.log('hi', { status })
+      console.log('hello')
     })()
   }, [device])
 
@@ -67,7 +69,7 @@ export default function CharactersScreen() {
         Asset.fromModule(require('../../assets/babylon/babylon.html')).downloadAsync(),
         Asset.fromModule(require('../../assets/babylon/babylon_style.css')).downloadAsync(),
         Asset.fromModule(require('../../assets/babylon/script.txt')).downloadAsync(),
-        Asset.fromModule(require('../../assets/babylon/jammo.glb')).downloadAsync(),
+        Asset.fromModule(require('../../assets/babylon/jammo1.3.glb')).downloadAsync(),
       ]);
 
       // 1️⃣ Read the raw HTML

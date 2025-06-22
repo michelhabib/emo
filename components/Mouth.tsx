@@ -7,6 +7,11 @@ export interface MouthProps {
   /** Optional fill colour. Defaults to yellow */
   color?: string;
   radius?: number;
+  /** Probability (0-1) that the person is smiling. If provided and below
+   *  threshold, the Mouth component will not render. */
+  smilingProbability?: number;
+  /** Probability threshold required to render the mouth (defaults to 0.5) */
+  threshold?: number;
 }
 
 const DEFAULT_MOUTH_RADIUS = 6;
@@ -14,7 +19,19 @@ const DEFAULT_MOUTH_RADIUS = 6;
 /**
  * Pure drawing component for mouth landmark (rendered when smiling).
  */
-const Mouth: React.FC<MouthProps> = ({ cx, cy, radius, color = 'yellow' }) => {
+const Mouth: React.FC<MouthProps> = ({
+  cx,
+  cy,
+  radius,
+  color = 'yellow',
+  smilingProbability,
+  threshold = 0.5,
+}) => {
+  // If probability provided and below threshold, render nothing
+  if (smilingProbability !== undefined && smilingProbability < threshold) {
+    return null;
+  }
+
   const paint = useMemo(() => {
     const p = Skia.Paint();
     p.setColor(Skia.Color(color));
