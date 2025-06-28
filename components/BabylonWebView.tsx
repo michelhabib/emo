@@ -1,7 +1,7 @@
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { EyeCentres } from './SmartCamera';
 
@@ -109,7 +109,7 @@ const BabylonWebView: React.FC<BabylonWebViewProps> = ({ style, eyeCentres, onEr
       mixedContentMode="always"
       javaScriptEnabled
       domStorageEnabled
-      style={styles.webview}
+      style={style}
       startInLoadingState
       onError={onError}
       onHttpError={onHttpError}
@@ -117,23 +117,5 @@ const BabylonWebView: React.FC<BabylonWebViewProps> = ({ style, eyeCentres, onEr
   );
 };
 
-const styles = StyleSheet.create({
-  webview: {
-    position: 'absolute',
-    top: 200,
-    right: 80,
-    width: 250,
-    height: 500,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-});
 
 export default BabylonWebView; 

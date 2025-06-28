@@ -1,10 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Canvas } from '@shopify/react-native-skia';
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Camera, Frame, runAtTargetFps, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { Face, FaceDetectionOptions, useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { Worklets, useSharedValue } from 'react-native-worklets-core';
 import { crop } from 'vision-camera-cropper';
+import styles from './SmartCamera.styles';
 
 import Eye from '@/components/Eye';
 import FaceRect from '@/components/FaceRect';
@@ -48,6 +50,10 @@ export interface SmartCameraProps {
 export interface SmartCameraHandle {
   /** Trigger a one-shot snapshot. The next frame with a detected face will be cropped and returned via onSnapshot. */
   captureSnapshot: () => void;
+  /** Trigger a one-shot snapshot of the FULL frame (no face required). */
+  captureAllSnapshot: () => void;
+  /** Toggle between the front and back camera. */
+  switchCamera: () => void;
 }
 
 /** Normalised eye–centre positions (percent of overlay width/height). */
@@ -89,16 +95,28 @@ const SmartCameraComponent = (
     onSnapshot,
   } = props;
 
-  const faceDetectionOptions = useRef<FaceDetectionOptions>({
-    performanceMode,
-    classificationMode: 'all',
-    minFaceSize,
-    landmarkMode,
-    cameraFacing,
-  }).current;
+  // ------------------------------------------------------------------
+  // Internal camera facing state (can be toggled via imperative handle)
+  // ------------------------------------------------------------------
+  const [currentFacing, setCurrentFacing] = React.useState<"front" | "back">(cameraFacing);
 
+  // Update the camera devices each render (will switch when currentFacing changes)
   const devices = useCameraDevices();
-  const device = devices.find((d) => d.position === cameraFacing) ?? devices[0];
+  const device = devices.find((d) => d.position === currentFacing) ?? devices[0];
+
+  // ------------------------------------------------------------------
+  // Face-detection options (re-created whenever dependencies change)
+  // ------------------------------------------------------------------
+  const faceDetectionOptions = React.useMemo<FaceDetectionOptions>(
+    () => ({
+      performanceMode,
+      classificationMode: "all",
+      minFaceSize,
+      landmarkMode,
+      cameraFacing: currentFacing,
+    }),
+    [performanceMode, minFaceSize, landmarkMode, currentFacing]
+  );
 
   const { detectFaces } = useFaceDetector(faceDetectionOptions);
 
@@ -142,14 +160,27 @@ const SmartCameraComponent = (
   /* ------------------------------------------------------------------
    * Snapshot shared values + imperative handle
    * ----------------------------------------------------------------*/
-  const snapFlag = useSharedValue(0);        // increments on each request
-  const lastSnapHandled = useSharedValue(0); // last processed value (worklet)
+  const snapFlag = useSharedValue(0);        // increments on each face-shot request
+  const lastSnapHandled = useSharedValue(0); // last processed face-shot id
 
-  useImperativeHandle(ref, () => ({
-    captureSnapshot: () => {
-      snapFlag.value = snapFlag.value + 1;
-    },
-  }), [snapFlag]);
+  const snapAllFlag = useSharedValue(0);        // increments on each FULL-frame request
+  const lastSnapAllHandled = useSharedValue(0); // last processed full-shot id
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      captureSnapshot: () => {
+        snapFlag.value = snapFlag.value + 1;
+      },
+      captureAllSnapshot: () => {
+        snapAllFlag.value = snapAllFlag.value + 1;
+      },
+      switchCamera: () => {
+        setCurrentFacing((prev) => (prev === "front" ? "back" : "front"));
+      },
+    }),
+    []
+  );
 
   // Called from the worklet on the JS thread
   const updateFacesOnJS = Worklets.createRunOnJS((faces: Face[], frame: Frame) => {
@@ -163,6 +194,12 @@ const SmartCameraComponent = (
     const mirrorX = (x: number, w: number) => width - x - w;
 
     const processed: DrawableFace[] = faces.map((face) => {
+      console.log('Frame is Mirrored: ', frame.isMirrored);
+      console.log('window width*height: ', width, height);
+      console.log('frame orientation: ', frame.orientation);
+      console.log('frame corrected width*height: ', frameW, frameH);
+      console.log('frameW * frameH: ', frameW , frameH);
+      console.log('scaleX * scaleY: ', sx , sy);
       const rect = {
         x: mirrorX(face.bounds.x * sx, face.bounds.width * sx),
         y: face.bounds.y * sy,
@@ -249,15 +286,51 @@ const SmartCameraComponent = (
         // ------------------------------------------------------------------
         // Snapshot logic – crop first detected face when requested
         // ------------------------------------------------------------------
+        // Helper to clamp values between a min/max (worklet-safe)
+        const clamp = (v: number, mn: number, mx: number) => {
+          'worklet';
+          return v < mn ? mn : v > mx ? mx : v;
+        };
+
+        // FULL-frame snapshot -------------------------------------------------
+        if (snapAllFlag.value > lastSnapAllHandled.value) {
+          // Use the same percentage-based convention as face crops
+          const cropRegion = {
+            left: 0,
+            top: 0,
+            width: 100,
+            height: 100,
+          };
+          console.log('cropRegion: ', cropRegion);
+          const result = crop(frame, {
+            cropRegion,
+            includeImageBase64: true,
+            saveAsFile: true,
+          });
+          if (result && result.path) {
+            deliverSnapshotOnJS(result.path);
+          } else if (result && result.base64) {
+            deliverSnapshotOnJS(result.base64);
+          }
+          lastSnapAllHandled.value = snapAllFlag.value;
+        }
+
+        // FACE-bounded snapshot ----------------------------------------------
         if (snapFlag.value > lastSnapHandled.value && faces.length > 0) {
           const face = faces[0];
+
+          // Ensure bounds are within the frame dimensions
+          const x = clamp(face.bounds.x, 0, frameW);
+          const y = clamp(face.bounds.y, 0, frameH);
+          const w = clamp(face.bounds.width, 0, frameW - x);
+          const h = clamp(face.bounds.height, 0, frameH - y);
+
           const cropRegion = {
-            left: (face.bounds.x / frameW) * 100,
-            top: (face.bounds.y / frameH) * 100,
-            width: (face.bounds.width / frameW) * 100,
-            height: (face.bounds.height / frameH) * 100,
+            left: (x / frameW) * 100,
+            top: (y / frameH) * 100,
+            width: (w / frameW) * 100,
+            height: (h / frameH) * 100,
           };
-          console.log('[SmartCamera] cropRegion', cropRegion);
           const result = crop(frame, {
             cropRegion,
             includeImageBase64: true,
@@ -272,7 +345,7 @@ const SmartCameraComponent = (
         }
       });
     },
-    [snapFlag]
+    [snapFlag, snapAllFlag]
   );
 
   if (!device) {
@@ -280,48 +353,65 @@ const SmartCameraComponent = (
   }
 
   return (
-    <View
-      style={[
-        styles.cameraContainer,
-        { width, height, top, right },
-        style,
-      ]}>
-      <Camera
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={true}
-        frameProcessor={frameProcessor}
-      />
+    <View style={[styles.wrapper, { top, right }] } pointerEvents="box-none">
+      {/* Camera Overlay */}
+      <View
+        style={[
+          styles.cameraContainer,
+          { width, height },
+          style,
+        ]}
+        pointerEvents="none">
+        <Camera
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive={true}
+          frameProcessor={frameProcessor}
+          pointerEvents="none"
+        />
 
-      <Canvas style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)' }] }>
-        {facesData.map((face, idx) => (
-          <React.Fragment key={idx}>
-            {showFace && <FaceRect {...face.rect} />}
-            {showEyes && face.leftEye && <Eye {...face.leftEye} />}
-            {showEyes && face.rightEye && <Eye {...face.rightEye} />}
-            {showMouth && face.mouth && <Mouth {...face.mouth} />}
-          </React.Fragment>
-        ))}
-      </Canvas>
+        <Canvas
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)' }] }>
+          {facesData.map((face, idx) => (
+            <React.Fragment key={idx}>
+              {showFace && <FaceRect {...face.rect} />}
+              {showEyes && face.leftEye && <Eye {...face.leftEye} />}
+              {showEyes && face.rightEye && <Eye {...face.rightEye} />}
+              {showMouth && face.mouth && <Mouth {...face.mouth} />}
+            </React.Fragment>
+          ))}
+        </Canvas>
+      </View>
+
+      {/* Control buttons below the camera */}
+      <View style={[styles.controlsRow, { width }]} pointerEvents="auto">
+        <Pressable
+          style={styles.controlButton}
+          onPress={() => {
+            snapFlag.value = snapFlag.value + 1;
+          }}>
+          <Ionicons name="camera-outline" size={24} color="#fff" />
+        </Pressable>
+
+        <Pressable
+          style={styles.controlButton}
+          onPress={() => {
+            snapAllFlag.value = snapAllFlag.value + 1;
+          }}>
+          <Ionicons name="scan-outline" size={24} color="#fff" />
+        </Pressable>
+
+        <Pressable
+          style={styles.controlButton}
+          onPress={() => {
+            setCurrentFacing((prev) => (prev === 'front' ? 'back' : 'front'));
+          }}>
+          <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
+        </Pressable>
+      </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  cameraContainer: {
-    position: 'absolute',
-    top: 400,
-    right: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-});
 
 export default forwardRef<SmartCameraHandle, SmartCameraProps>(SmartCameraComponent); 

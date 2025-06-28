@@ -5,5 +5,5 @@ import { Redirect } from 'expo-router';
 // work-arounds.
 
 export default function IndexRedirect() {
-  return <Redirect href="/home" />;
+  return <Redirect href="/chat" />;
 } 

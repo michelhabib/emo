@@ -14,7 +14,7 @@ export default function TabLayout() {
   return (
     // set default tab for Camera screen
     <Tabs
-      initialRouteName="home"
+      initialRouteName="chat"
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
@@ -48,6 +48,16 @@ export default function TabLayout() {
         options={{
           title: 'Characters',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color }) => (
+            /* Using paper plane icon as a chat metaphor */
+            <IconSymbol size={28} name="paperplane.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />

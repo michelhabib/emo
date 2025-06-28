@@ -448,6 +448,7 @@ const canvas = document.getElementById('renderCanvas');
         }
 
         const scene = createScene();
+        scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // RGBA - last value is alpha (0 is transparent)
 
         engine.runRenderLoop(function () {
             scene.render();
