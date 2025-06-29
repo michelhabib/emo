@@ -24,6 +24,16 @@ export type ChatMessage = {
   photo?: string;
 };
 
+// Common payload structure for socket messages used only internally
+type PayloadType = 'text' | 'photo';
+
+interface SocketPayload {
+  userid: string;
+  type: PayloadType;
+  data: string;
+  timestamp: number;
+}
+
 interface ChatBoxProps {
   /** Optional container style override */
   style?: object;
@@ -60,10 +70,21 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   // ---------------------------------------------------------------------------
   const [token, setToken] = React.useState<string | null>(null);
 
+  const USERNAME = 'misho';
+  const PASSWORD = 'M@$ter123';
+
+  // ---------------------------------------------------------------------------
+  // Helper to build socket payloads with shared fields
+  // ---------------------------------------------------------------------------
+  const buildPayload = (type: PayloadType, data: string): SocketPayload => ({
+    userid: USERNAME,
+    type,
+    data,
+    timestamp: Date.now(),
+  });
+
   React.useEffect(() => {
     // Hard-coded demo credentials – replace with secure flow later
-    const USERNAME = 'misho';
-    const PASSWORD = 'M@$ter123';
 
     const fetchToken = async () => {
       try {
@@ -163,14 +184,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const handleSend = React.useCallback(() => {
     if (!inputText.trim()) return;
 
-    const payload = { user: 'me', text: inputText.trim() };
+    const payload = buildPayload('text', inputText.trim());
     console.log('[ChatBox] sending ⇒', payload);
 
     socketRef.current?.emit('text_message', payload, (ack?: string) => {
       console.log('[ChatBox] ack ⇐', ack);
     });
 
-    setMessages(p => [...p, { ...payload, id: Date.now().toString() }]);
+    setMessages(p => [...p, { ...payload, id: Date.now().toString(), user: USERNAME }]);
     setInputText('');
   }, [inputText]);
 
@@ -189,7 +210,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       });
 
       const base64Uri = `data:image/jpeg;base64,${base64}`;
-      const payload = { user: 'me', photo: base64Uri };
+      const payload = buildPayload('photo', base64Uri);
 
       console.log('[ChatBox] sending photo ⇒', payload);
       socketRef.current?.emit('send_photo', payload, (ack?: string) => {
@@ -197,7 +218,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       });
 
       // Update local list
-      setMessages(p => [...p, { ...payload, id: Date.now().toString() }]);
+      setMessages(p => [...p, { ...payload, id: Date.now().toString(), user: USERNAME }]);
     } catch (err) {
       console.error('[ChatBox] Failed to read photo', err);
     }
