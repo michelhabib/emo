@@ -13,6 +13,10 @@ import {
 import { io, Socket } from 'socket.io-client';
 import styles from './ChatBox.styles';
 
+// Hard-coded demo credentials – replace with secure flow later
+const USERNAME = 'misho';
+const PASSWORD = 'M@$ter123';
+
 // -----------------------------------------------------------------------------
 // Types & Props
 // -----------------------------------------------------------------------------
@@ -24,16 +28,6 @@ export type ChatMessage = {
   photo?: string;
 };
 
-// Common payload structure for socket messages used only internally
-type PayloadType = 'text' | 'photo';
-
-interface SocketPayload {
-  userid: string;
-  type: PayloadType;
-  data: string;
-  timestamp: number;
-}
-
 interface ChatBoxProps {
   /** Optional container style override */
   style?: object;
@@ -44,6 +38,33 @@ interface ChatBoxProps {
   /** Path on device for the predefined JPEG to send when user taps 📷 */
   photoPath?: string | null;
 }
+
+// Payload interface for socket emissions
+interface MessagePayload {
+  data: string;
+  type: 'text' | 'photo';
+  timestamp: number;
+  userid: string;
+}
+
+// -----------------------------------------------------------------------------
+// Helper Functions
+// -----------------------------------------------------------------------------
+
+/**
+ * Creates a standardized payload for socket emissions
+ * @param data - The message content (text or base64 photo data)
+ * @param type - The type of message ('text' or 'photo')
+ * @returns Formatted payload with data, type, timestamp, and userid
+ */
+const createMessagePayload = (data: string, type: 'text' | 'photo'): MessagePayload => {
+  return {
+    data,
+    type,
+    timestamp: Date.now(),
+    userid: 'me', // TODO: Replace with actual user ID from auth context
+  };
+};
 
 // https://socket.io/how-to/use-with-react
 
@@ -70,21 +91,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   // ---------------------------------------------------------------------------
   const [token, setToken] = React.useState<string | null>(null);
 
-  const USERNAME = 'misho';
-  const PASSWORD = 'M@$ter123';
-
-  // ---------------------------------------------------------------------------
-  // Helper to build socket payloads with shared fields
-  // ---------------------------------------------------------------------------
-  const buildPayload = (type: PayloadType, data: string): SocketPayload => ({
-    userid: USERNAME,
-    type,
-    data,
-    timestamp: Date.now(),
-  });
-
   React.useEffect(() => {
-    // Hard-coded demo credentials – replace with secure flow later
+
 
     const fetchToken = async () => {
       try {
@@ -141,13 +149,13 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       console.log('[ChatBox] Connected:', socket.id);
     };
 
-    const handleTextMessage = (payload: Omit<ChatMessage, 'id'> & { id?: string }) => {
+    const handleTextMessage = (payload: MessagePayload) => {
       console.log('[ChatBox] received message ⇐', payload);
       const normalised: ChatMessage = {
-        id: payload.id ?? Date.now().toString(),
-        user: payload.user === 'me' ? 'server' : payload.user, 
-        text: payload.text,
-        photo: payload.photo,
+        id: Date.now().toString(),
+        user: payload.userid === 'me' ? 'server' : payload.userid, 
+        text: payload.data,
+        photo: undefined,
       };
       setMessages(prev => [...prev, normalised]);
     };
@@ -184,14 +192,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   const handleSend = React.useCallback(() => {
     if (!inputText.trim()) return;
 
-    const payload = buildPayload('text', inputText.trim());
+    const payload = createMessagePayload(inputText.trim(), 'text');
     console.log('[ChatBox] sending ⇒', payload);
 
     socketRef.current?.emit('text_message', payload, (ack?: string) => {
       console.log('[ChatBox] ack ⇐', ack);
     });
 
-    setMessages(p => [...p, { ...payload, id: Date.now().toString(), user: USERNAME }]);
+    // Add to local messages with the old format for display
+    const localMessage = { user: 'me', text: inputText.trim(), id: Date.now().toString() };
+    setMessages(p => [...p, localMessage]);
     setInputText('');
   }, [inputText]);
 
@@ -210,15 +220,16 @@ const ChatBox: React.FC<ChatBoxProps> = ({
       });
 
       const base64Uri = `data:image/jpeg;base64,${base64}`;
-      const payload = buildPayload('photo', base64Uri);
+      const payload = createMessagePayload(base64Uri, 'photo');
 
       console.log('[ChatBox] sending photo ⇒', payload);
       socketRef.current?.emit('send_photo', payload, (ack?: string) => {
         console.log('[ChatBox] photo ack ⇐', ack);
       });
 
-      // Update local list
-      setMessages(p => [...p, { ...payload, id: Date.now().toString(), user: USERNAME }]);
+      // Add to local messages with the old format for display
+      const localMessage = { user: 'me', photo: base64Uri, id: Date.now().toString() };
+      setMessages(p => [...p, localMessage]);
     } catch (err) {
       console.error('[ChatBox] Failed to read photo', err);
     }
