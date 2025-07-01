@@ -98,6 +98,7 @@ export default function CameraScreen() {
           color: 'red',
           strokeWidth: 4,
         };
+        console.log('face rect: ', rect);
 
         // Eyes ----------------------------------------------------------
         const leftEye = face.landmarks?.LEFT_EYE

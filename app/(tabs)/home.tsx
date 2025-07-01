@@ -28,13 +28,13 @@ export default function HomeScreen() {
       {/* Floating face-tracking camera overlay */}
       <SmartCamera
         /* all props are optional – shown here for clarity */
-        width={100}
-        height={150}
-        targetFps={1}
+        width={75}
+        height={100}
+        targetFps={10}
         performanceMode="fast"
         landmarkMode="all"
         minFaceSize={0.10}
-        cameraFacing="back"
+        cameraFacing="front"
         top={50}
         right={20}
         showFace={true}

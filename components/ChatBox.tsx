@@ -42,9 +42,9 @@ interface ChatBoxProps {
 const ChatBox: React.FC<ChatBoxProps> = ({
   style,
   // TODO: Cleartext traffic blocked on Android - make it https
-  socketUrl = 'http://10.0.2.2:8000/',
+  socketUrl = 'http://10.0.1.54:8000/',
   topOffset = 80,
-  photoPath = '/data/data/com.anonymous.emo/cache/1750883047955.jpg',
+  photoPath = '/data/data/com.anonymous.emo/cache/img.JPG',
 }) => {
   // ---------------------------------------------------------------------------
   // Socket.IO – delegate to custom hook

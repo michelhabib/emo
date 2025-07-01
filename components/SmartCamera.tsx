@@ -13,8 +13,8 @@ import FaceRect from '@/components/FaceRect';
 import Mouth from '@/components/Mouth';
 
 // Default size of the preview window (can be overridden via props)
-const DEFAULT_W = 150;
-const DEFAULT_H = 200;
+const DEFAULT_W = 75;
+const DEFAULT_H = 100;
 
 export interface SmartCameraProps {
   /** Size of the preview overlay */
@@ -192,6 +192,9 @@ const SmartCameraComponent = (
     const sx = width / frameW;
     const sy = height / frameH;
     const mirrorX = (x: number, w: number) => width - x - w;
+    if (faces.length > 0) {
+      console.log('detected faces: ', faces.length);
+    }
 
     const processed: DrawableFace[] = faces.map((face) => {
       console.log('Frame is Mirrored: ', frame.isMirrored);
@@ -208,6 +211,7 @@ const SmartCameraComponent = (
         color: 'red',
         strokeWidth: 4,
       };
+      console.log('face rect: ', rect);
 
       const leftEye = face.landmarks?.LEFT_EYE
         ? {
@@ -226,6 +230,8 @@ const SmartCameraComponent = (
             color: 'cyan',
           }
         : undefined;
+
+      // console.log('face landmarks: ', face.landmarks);
 
       const mouth = face.landmarks?.MOUTH_BOTTOM
         ? {

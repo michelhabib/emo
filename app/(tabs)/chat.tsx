@@ -8,8 +8,8 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ChatBox socketUrl={Platform.OS === 'android'
-            ? 'http://10.0.2.2:8000/'
-            : 'http://localhost:8000/'} />
+            ? 'http://10.0.1.54:8000/'
+            : 'http://10.0.1.54:8000/'} />
     </SafeAreaView>
   );
 } 
