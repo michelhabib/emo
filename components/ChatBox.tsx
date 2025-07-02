@@ -143,8 +143,10 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
       {/* Chat input */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'position'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
         style={styles.inputContainer}
+        contentContainerStyle={styles.inputContainer /* ensures row layout inside wrapper */}
       >
         <TextInput
           value={inputText}

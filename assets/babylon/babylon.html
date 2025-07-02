@@ -245,9 +245,9 @@ const canvas = document.getElementById('renderCanvas');
         }
 
         const createCamera = function (scene) {
-            const cameraTarget = new BABYLON.Vector3(0, 3, 0);
+            const cameraTarget = new BABYLON.Vector3(0, 4.5, 0);
             const camera = new BABYLON.ArcRotateCamera("faceCam", Math.PI / 4, Math.PI / 4, 10, cameraTarget, scene);
-            camera.setPosition(new BABYLON.Vector3(0, 6, 8)); // Set initial position
+            camera.setPosition(new BABYLON.Vector3(0, 5, 5)); // Set initial position
             camera.ellipsoid = new BABYLON.Vector3(3, 6, 3);
             camera.minZ = 0; // Set near plane to avoid clipping
             camera.checkCollisions = true;

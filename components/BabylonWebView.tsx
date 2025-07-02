@@ -109,7 +109,8 @@ const BabylonWebView: React.FC<BabylonWebViewProps> = ({ style, eyeCentres, onEr
       mixedContentMode="always"
       javaScriptEnabled
       domStorageEnabled
-      style={style}
+      containerStyle={style}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
       startInLoadingState
       onError={onError}
       onHttpError={onHttpError}

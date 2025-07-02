@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 
 export default function ChatScreen() {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
       <ChatBox socketUrl={Platform.OS === 'android'
             ? 'http://10.0.1.54:8000/'
             : 'http://10.0.1.54:8000/'} />

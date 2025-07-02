@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Canvas } from '@shopify/react-native-skia';
 import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Camera, Frame, runAtTargetFps, useCameraDevices, useFrameProcessor } from 'react-native-vision-camera';
 import { Face, FaceDetectionOptions, useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { Worklets, useSharedValue } from 'react-native-worklets-core';
@@ -192,9 +191,9 @@ const SmartCameraComponent = (
     const sx = width / frameW;
     const sy = height / frameH;
     const mirrorX = (x: number, w: number) => width - x - w;
-    if (faces.length > 0) {
-      console.log('detected faces: ', faces.length);
-    }
+    // if (faces.length > 0) {
+    //   console.log('detected faces: ', faces.length);
+    // }
 
     const processed: DrawableFace[] = faces.map((face) => {
       console.log('Frame is Mirrored: ', frame.isMirrored);
@@ -390,32 +389,7 @@ const SmartCameraComponent = (
         </Canvas>
       </View>
 
-      {/* Control buttons below the camera */}
-      <View style={[styles.controlsRow, { width }]} pointerEvents="auto">
-        <Pressable
-          style={styles.controlButton}
-          onPress={() => {
-            snapFlag.value = snapFlag.value + 1;
-          }}>
-          <Ionicons name="camera-outline" size={24} color="#fff" />
-        </Pressable>
-
-        <Pressable
-          style={styles.controlButton}
-          onPress={() => {
-            snapAllFlag.value = snapAllFlag.value + 1;
-          }}>
-          <Ionicons name="scan-outline" size={24} color="#fff" />
-        </Pressable>
-
-        <Pressable
-          style={styles.controlButton}
-          onPress={() => {
-            setCurrentFacing((prev) => (prev === 'front' ? 'back' : 'front'));
-          }}>
-          <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
-        </Pressable>
-      </View>
+      {/* Control buttons have been moved to HomeScreen */}
     </View>
   );
 };
